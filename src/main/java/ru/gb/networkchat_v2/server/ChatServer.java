@@ -34,10 +34,10 @@ public class ChatServer {
         }
     }
     //Отправить сообщение конкретному пользователю
-    public void sendMessSpecChatParticipant(String nick, String message){
+    public void sendMessSpecChatParticipant(String nick, String message, ClientHandler senderName){
         for (ClientHandler client : clients) {
             if(nick.equals(client.getNick())){
-                client.sendMessage(message);
+                client.sendMessage(senderName.getNick() + ": " + message);
             }
         }
     }

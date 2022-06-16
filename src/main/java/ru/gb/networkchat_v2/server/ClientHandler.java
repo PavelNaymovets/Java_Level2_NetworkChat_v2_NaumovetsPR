@@ -110,11 +110,11 @@ public class ClientHandler {
                 if("/end".equals(receivedMessage)){
                     break;
                 }
-                if("/w".startsWith(receivedMessage)){ //Отпарвка сообщения конкретному пользователю
+                if(receivedMessage.startsWith("/w")){ //Отпарвка сообщения конкретному пользователю
                     String[] oneUser = receivedMessage.split("\\p{Blank}+"); //Разбиваю сообщение на части
                     String nickUser = oneUser[1];//Ник из сообщения
                     String messageUser = oneUser[2];//Личное сообщение от одного пользователя для другого
-                    server.sendMessSpecChatParticipant(nickUser, messageUser);//Отправляю личное сообщение пользователю по нику
+                    server.sendMessSpecChatParticipant(nickUser, messageUser, this);//Отправляю личное сообщение пользователю по нику
                 } else{
                     server.broadcast(nick + ": " + receivedMessage); //Сервер рассылает сообщение всем уже авторизированным участникам чата
                 }
