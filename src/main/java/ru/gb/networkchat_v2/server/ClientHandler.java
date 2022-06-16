@@ -4,6 +4,8 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.util.Arrays;
+
 /*
     Класс, который будет работать с конкретным клиентом. То есть каждый раз будет создаваться экземпляр
     этого класса. И каждый клиент будет подключаться по своему сокету. Несколько клиентов могут коннектиться к одному серверу.
@@ -113,7 +115,7 @@ public class ClientHandler {
                 if(receivedMessage.startsWith("/w")){ //Отпарвка сообщения конкретному пользователю
                     String[] oneUser = receivedMessage.split("\\p{Blank}+"); //Разбиваю сообщение на части
                     String nickUser = oneUser[1];//Ник из сообщения
-                    String messageUser = oneUser[2];//Личное сообщение от одного пользователя для другого
+                    String messageUser = getMessage(receivedMessage);//Личное сообщение от одного пользователя для другого
                     server.sendMessSpecChatParticipant(nickUser, messageUser, this);//Отправляю личное сообщение пользователю по нику
                 } else{
                     server.broadcast(nick + ": " + receivedMessage); //Сервер рассылает сообщение всем уже авторизированным участникам чата
@@ -122,6 +124,15 @@ public class ClientHandler {
                 e.printStackTrace();
             }
         }
+    }
+
+    private String getMessage(String receivedMessage) {
+        StringBuilder message = new StringBuilder();
+        String[] rmArr = receivedMessage.split("\\p{Blank}+");
+        for (int i = 2; i < rmArr.length; i++) {
+            message.append(rmArr[i] + " ");
+        }
+        return message.toString().trim();
     }
 
     public String getNick() {
