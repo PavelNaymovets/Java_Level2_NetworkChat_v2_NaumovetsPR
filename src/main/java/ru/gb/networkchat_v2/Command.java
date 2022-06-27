@@ -62,7 +62,7 @@ public enum Command {
         }
     },
 
-    FINISH("/finish") {
+    FINISH("/finish") { //Таблетка для завершения работы сервера и клиента при истечении времени аутентификации
         @Override
         public String[] parse(String commandText) {
             return new String[0];

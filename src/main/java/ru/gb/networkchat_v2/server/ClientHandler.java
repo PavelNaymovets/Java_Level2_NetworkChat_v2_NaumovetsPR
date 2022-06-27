@@ -22,7 +22,7 @@ public class ClientHandler {
     private DataOutputStream out;//Поток передачи информации
     private String nick;//Ник участника чата
     private AuthService authService;//Аутентификация пользователя
-    private final int CONNECTION_TIME = 15_000; //Время на подклюечение к серверу
+    private final int CONNECTION_TIME = 20_000; //Время на подклюечение к серверу
 
     public ClientHandler(Socket socket, ChatServer server, AuthService authService) {
         try {
@@ -59,7 +59,7 @@ public class ClientHandler {
             }
         });
         thread.setDaemon(true); //Делаем поток демоном, чтобы не ждать завершения его работы в случае удачной авторизации пользователя
-        thread.start();
+        thread.start(); //Запускаем поток
         while (true) {
             try {
                 String authMessage = in.readUTF(); //Получаю сообщение от участница чата(клиента)
@@ -85,7 +85,7 @@ public class ClientHandler {
                         sendMessage(Command.ERROR, "Неверные логин и пароль");
                     }
                 }
-                if (command == END) {
+                if (command == END) { //Если от клиента пришла таблетка, закрываем соединение
                     return false;
                 }
             } catch (IOException e) {
