@@ -1,10 +1,13 @@
 package ru.gb.networkchat_v2.server;
 
+import ru.gb.networkchat_v2.Command;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
-import java.util.Arrays;
+
+import static ru.gb.networkchat_v2.Command.*;
 
 /*
     Класс, который будет работать с конкретным клиентом. То есть каждый раз будет создаваться экземпляр
@@ -19,6 +22,7 @@ public class ClientHandler {
     private DataOutputStream out;//Поток передачи информации
     private String nick;//Ник участника чата
     private AuthService authService;//Аутентификация пользователя
+    private final int CONNECTION_TIME = 15_000; //Время на подклюечение к серверу
 
     public ClientHandler(Socket socket, ChatServer server, AuthService authService) {
         try {
@@ -28,66 +32,90 @@ public class ClientHandler {
             this.in = new DataInputStream(socket.getInputStream());
             this.out = new DataOutputStream(socket.getOutputStream());
             new Thread(() -> {
-                try{
-                    authenticate(); //Аутентифицирую пользователя на стороне сервера
-                    readMessage(); //Чтение сообщений от участников чата
+                try {
+                    if (authenticate()) { //Аутентифицирую пользователя на стороне сервера
+                        readMessage(); //Чтение сообщений от участников чата
+                    }
                 } finally {
                     closeConnection(); //Закрываю ресурсы, если участник чата вышел или прислал "/end"
                 }
             }).start();
         } catch (IOException e) {
+            System.err.println("Соединение с сервером прервано! Перезапустите приложение");
             e.printStackTrace();
         }
     }
+
     //Аутентификация пользователя
-    private void authenticate() { // условный формат данных для аутентификации: /auth login1 pass1
-        while(true){
+    private boolean authenticate() { // условный формат данных для аутентификации: /auth login1 pass1
+        Thread thread = new Thread(() -> { //Поток, который отсчитывает время на подключение к серверу
+            long start = System.currentTimeMillis();
+            while (true) {
+                long result = System.currentTimeMillis() - start;
+                if (result == CONNECTION_TIME) {
+                    sendMessage(FINISH);
+                    break;
+                }
+            }
+        });
+        thread.setDaemon(true); //Делаем поток демоном, чтобы не ждать завершения его работы в случае удачной авторизации пользователя
+        thread.start();
+        while (true) {
             try {
                 String authMessage = in.readUTF(); //Получаю сообщение от участница чата(клиента)
-                if(authMessage.startsWith("/auth")){ //Пришло сообщение с пометкой "/auth"
-                    String[] logPass = authMessage.split("\\p{Blank}+");
-                    String login = logPass[1];//Логин из сообщение
-                    String password = logPass[2];//Пароль из сообщения
+                Command command = Command.getCommand(authMessage);
+                if (command == Command.AUTH) {
+                    String[] params = command.parse(authMessage);
+                    String login = params[0];//Логин из сообщение
+                    String password = params[1];//Пароль из сообщения
                     String nick = authService.getNickByLoginAndPassword(login, password);//Ник по логину и паролю
-                    if(nick != null){//Занят ли ник
-                        if(server.isNickBusy(nick)){
-                            sendMessage("Пользователь уже авторизован");
+                    if (nick != null) {//Занят ли ник
+                        if (server.isNickBusy(nick)) {
+                            sendMessage(Command.ERROR, "Пользователь уже авторизован");
                             continue;
                         }
-                        sendMessage("/authok " + nick); //Если ник не занят. Отправляю участнику чата(клиенту) сообщение для входа в чат
+                        sendMessage(Command.AUTHOK, nick); //Если ник не занят. Отправляю участнику чата(клиенту) сообщение для входа в чат
                         this.nick = nick;
                         //Отправляем всем пользователям, что клиент подключился
-                        server.broadcast("Пользователь " + nick + " зашел в чат");
+                        server.broadcast(Command.MESSAGE, "Пользователь " + nick + " зашел в чат");
                         //Добавляем пользователя в список клиентов
                         server.subscribe(this);
-                        break;
-                    } else{
-                        sendMessage("Неверные логин и пароль");
+                        return true;
+                    } else {
+                        sendMessage(Command.ERROR, "Неверные логин и пароль");
                     }
+                }
+                if (command == END) {
+                    return false;
                 }
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
     }
+
+    public void sendMessage(Command command, String... params) {
+        sendMessage(command.collectMessage(params));
+    }
+
     //Закрываю подключение
     private void closeConnection() {
-        sendMessage("/end"); //Отключаю участника от сервера
-        if(in != null){
+        sendMessage(END); //Отключаю участника от сервера
+        if (in != null) {
             try {
                 in.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
-        if(out != null){
+        if (out != null) {
             try {
                 out.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
-        if(socket != null){
+        if (socket != null) {
             server.unsubscribe(this);
             try {
                 socket.close();
@@ -96,6 +124,7 @@ public class ClientHandler {
             }
         }
     }
+
     //Отправка сообщений от сервера к участникам чата
     public void sendMessage(String message) {
         try {
@@ -104,21 +133,23 @@ public class ClientHandler {
             e.printStackTrace();
         }
     }
+
     //Чтение сообщений от участников чата и рассылка этих сообщений всем участникам чата
     private void readMessage() {
-        while(true){
+        while (true) {
             try {
                 String receivedMessage = in.readUTF(); //Сервер читает сообщение от конкретного участника
-                if("/end".equals(receivedMessage)){
+                Command command = Command.getCommand(receivedMessage);
+                if (command == END) {
                     break;
                 }
-                if(receivedMessage.startsWith("/w")){ //Отпарвка сообщения конкретному пользователю
-                    String[] oneUser = receivedMessage.split("\\p{Blank}+"); //Разбиваю сообщение на части
-                    String nickUser = oneUser[1];//Ник из сообщения
-                    String messageUser = getMessage(receivedMessage);//Личное сообщение от одного пользователя для другого
-                    server.sendMessSpecChatParticipant(nickUser, messageUser, this);//Отправляю личное сообщение пользователю по нику
-                } else{
-                    server.broadcast(nick + ": " + receivedMessage); //Сервер рассылает сообщение всем уже авторизированным участникам чата
+                if (command == PRIVATE_MESSAGE) {
+                    String[] params = command.parse(receivedMessage);
+                    String nickTo = params[0];
+                    String message = params[1];
+                    server.sendPrivateMessage(nickTo, message, this);
+                } else {
+                    server.broadcast(Command.MESSAGE, nick + ": " + command.parse(receivedMessage)[0]); //Сервер рассылает сообщение всем уже авторизированным участникам чата
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -126,14 +157,14 @@ public class ClientHandler {
         }
     }
 
-    private String getMessage(String receivedMessage) {
-        StringBuilder message = new StringBuilder();
-        String[] rmArr = receivedMessage.split("\\p{Blank}+");
-        for (int i = 2; i < rmArr.length; i++) {
-            message.append(rmArr[i] + " ");
-        }
-        return message.toString().trim();
-    }
+//    private String getMessage(String receivedMessage) {
+//        StringBuilder message = new StringBuilder();
+//        String[] rmArr = receivedMessage.split("\\p{Blank}+");
+//        for (int i = 2; i < rmArr.length; i++) {
+//            message.append(rmArr[i] + " ");
+//        }
+//        return message.toString().trim();
+//    }
 
     public String getNick() {
         return nick;

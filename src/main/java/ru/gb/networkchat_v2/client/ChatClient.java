@@ -1,9 +1,15 @@
 package ru.gb.networkchat_v2.client;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import javafx.application.Platform;
+import ru.gb.networkchat_v2.Command;
+
+import java.io.*;
+import java.lang.reflect.Array;
 import java.net.Socket;
+import java.util.Arrays;
+
+import static ru.gb.networkchat_v2.Command.*;
+
 //Класс описывает логику работы приложения на стороне клиента
 public class ChatClient {
     private Socket socket; //Точка соединения с сервером
@@ -11,7 +17,7 @@ public class ChatClient {
     private DataOutputStream out; //Поток передачи информации
     private ChatController controller; //Экземпляр класса, который описывает поведение элементов пользовательского интерфейса. Нужен для взаимодействия с интерфейсом пользователя
 
-    public ChatClient(ChatController controller){
+    public ChatClient(ChatController controller) {
         this.controller = controller;
     }
 
@@ -21,46 +27,62 @@ public class ChatClient {
         out = new DataOutputStream(socket.getOutputStream()); //Открываем поток передачи инфомарции
         new Thread(() -> {
             try {
-                waitAuth();//Ожидаю аутентификации пользователя
-                readMessages(); //Читаю сообщения от других бользователей
+                if (waitAuth()) {//Ожидаю аутентификации пользователя
+                    readMessages();//Читаю сообщения от других бользователей
+                }
             } catch (IOException e) {
                 e.printStackTrace();
             } finally {
-                closeConnection(); //Закрываю соединение если "/end"
+                closeConnection();//Закрываю соединение если "/end"
             }
         }).start();
     }
 
-    private void waitAuth() throws IOException {
-        while(true){
-            String message = in.readUTF(); //Читаю ответ от сервера
-            if(message.startsWith("/authok")){ //Если пользователь аутентифицирован, то вернется сообщение в формате authok nick1
-                String[] authok = message.split("\\p{Blank}+"); //Разбиваю сообщение на части
-                String nick = authok[1]; //Беру ник пользователя
-                controller.setAuth(true); //Делаю блок чата видимым
-                controller.addMessage("Успешная авторизация под ником " + nick); //Передаю сообщение в окно истории чата только для себя
-                break;
+    private boolean waitAuth() throws IOException {
+        while (true) {
+            String message = in.readUTF();//Читаю ответ от сервера
+            Command command = getCommand(message);
+            String[] params = command.parse(message);
+            if (command == AUTHOK) {//Если пользователь аутентифицирован, то вернется сообщение в формате authok nick1
+                String nick = params[0];
+                controller.setAuth(true);//Делаю блок чата видимым
+                controller.addMessage("Успешная авторизация под ником " + nick);//Передаю сообщение в окно истории чата только для себя
+                return true;
+            }
+            if (command == ERROR) {
+                Platform.runLater(() -> controller.showError(params[0]));
+                continue;
+            }
+            if (command == FINISH) { //Таблетка на случай, если время подключения к серверу истечет
+                Platform.runLater(() -> controller.showError("Истекло время на вход в чат. Пожалуйста, перезапустите приложение "));
+                try {
+                    Thread.sleep(5000);
+                    sendMessage(END);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                return false;
             }
         }
     }
 
     //Закрываю ресурсы соединения с сервером
     private void closeConnection() {
-        if(in != null){
+        if (in != null) {
             try {
                 in.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
-        if(out != null){
+        if (out != null) {
             try {
                 out.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
-        if(socket != null){
+        if (socket != null) {
             try {
                 socket.close();
             } catch (IOException e) {
@@ -71,21 +93,38 @@ public class ChatClient {
 
     //Читаю сообщения от сервера
     private void readMessages() throws IOException {
-        while(true){
+        while (true) {
             String receivedMessage = in.readUTF();
-            if("/end".equals(receivedMessage)){ //Если пользователь захотел отключиться от чата, направляет "/end"
+            Command command = getCommand(receivedMessage);
+            if (END == command) { //Если пользователь захотел отключиться от чата, направляет "/end"
                 controller.setAuth(false); //Скрываем блок чата. Показываем блок авторизации
                 break;
             }
-            controller.addMessage(receivedMessage); //Добавляю сообщение от сервера в окно истории чата
+            String[] params = command.parse(receivedMessage);
+            if (ERROR == command) {
+                String messageError = params[0];
+                Platform.runLater(() -> controller.showError(messageError));
+                continue;
+            }
+            if (MESSAGE == command) {
+                Platform.runLater(() -> controller.addMessage(params[0])); //Добавляю сообщение от сервера в окно истории чата
+            }
+            if (CLIENTS == command) {
+                Platform.runLater(() -> controller.updateClientList(params));
+            }
         }
     }
+
     //Отправить сообщение на сервер
-    public void sendMessage(String sendMessage) {
+    private void sendMessage(String sendMessage) {
         try {
             out.writeUTF(sendMessage);
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public void sendMessage(Command command, String... params) {
+        sendMessage(command.collectMessage(params));
     }
 }

@@ -47,6 +47,15 @@ public class InMemoryAuthService implements AuthService {
             }
         }
         return null;
+        /*
+        Через стримы
+        return users.stream()
+                .filter(user -> login.equals(user.getLogin())
+                        && password.equals(user.getPassword()))
+                .findFirst()
+                .map(UserData::getNick)
+                .orElse(null);
+         */
     }
 
     @Override

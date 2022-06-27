@@ -1,17 +1,23 @@
 package ru.gb.networkchat_v2.server;
 
+import ru.gb.networkchat_v2.Command;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import static ru.gb.networkchat_v2.Command.CLIENTS;
+
 //Класс описывает логику работы сервера. Этот класс знает всю информацию об участниках чата(клиентах)
 public class ChatServer {
     //Список клиентов
-    private List<ClientHandler> clients; //Список участников чата (клиентов сервера).
+    private Map<String,ClientHandler> clients; //Список участников чата (клиентов сервера).
 
     public ChatServer() {
-        this.clients = new ArrayList<>();
+        this.clients = new HashMap<>();
     }
     //Запуск сервера
     public void start() {
@@ -27,36 +33,45 @@ public class ChatServer {
             e.printStackTrace();
         }
     }
-    //Рассылка сообщений всем участникам чата
-    public void broadcast(String message) {
-        for (ClientHandler client : clients) {
-            client.sendMessage(message);
-        }
-    }
+
     //Отправить сообщение конкретному пользователю
-    public void sendMessSpecChatParticipant(String nick, String message, ClientHandler senderName){
-        for (ClientHandler client : clients) {
-            if(nick.equals(client.getNick())){
-                client.sendMessage(senderName.getNick() + ": " + message);
-            }
+    public void sendPrivateMessage(String nickTo, String message, ClientHandler senderName){
+        ClientHandler clientTo = clients.get(nickTo);
+        if(clientTo == null){
+            senderName.sendMessage(Command.ERROR, "Пользователь не авторизован!");
+            return;
         }
+        clientTo.sendMessage(Command.MESSAGE, "От " + senderName.getNick() + ": " + message);
+        senderName.sendMessage(Command.MESSAGE,"Участнику " + nickTo + ": " + message);
     }
     //Добавление участника чата(клиента) в список клиентов(в дальнейшем применяем для общей рассылки).
     public void subscribe(ClientHandler client) {
-        clients.add(client);
+        clients.put(client.getNick(), client);
+        broadcastClientsList();
     }
+
+    private void broadcastClientsList() {
+        String nicks = clients.values().stream()
+                .map(ClientHandler::getNick)
+                .collect(Collectors.joining(" "));
+        broadcast(CLIENTS, nicks);
+    }
+
+    //Рассылка сообщений всем участникам чата
+    public void broadcast(Command command, String message) {
+        for (ClientHandler client : clients.values()) {
+            client.sendMessage(command, message);
+        }
+    }
+
     //Проверка занят ник или нет
     public boolean isNickBusy(String nick) {
-        for (ClientHandler client : clients) {
-            if(nick.equals(client.getNick())){
-                return true;
-            }
-        }
-        return false;
+        return clients.get(nick) != null;
     }
 
     //Удаление пользователя из списка клиентов, если он вышел из чата
     public void unsubscribe(ClientHandler client) {
-        clients.remove(client);
+        clients.remove(client.getNick());
+        broadcastClientsList();
     }
 }
