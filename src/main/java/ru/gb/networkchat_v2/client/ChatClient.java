@@ -89,6 +89,7 @@ public class ChatClient {
                 e.printStackTrace();
             }
         }
+        System.exit(0);
     }
 
     //Читаю сообщения от сервера

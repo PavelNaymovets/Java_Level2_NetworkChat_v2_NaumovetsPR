@@ -16,13 +16,15 @@ import static ru.gb.networkchat_v2.Command.*;
     Общение с конкретным клиентом происходит через этот класс
 */
 public class ClientHandler {
+    private static final int TIMEOUT_AUTHENTICATE = 120_000; //время ожидания аутентификации пользователя
     private Socket socket; //Точка соединения с сервером
     private ChatServer server;//Хранит всю информацию о клиентах
     private DataInputStream in;//Поток получения информации
     private DataOutputStream out;//Поток передачи информации
     private String nick;//Ник участника чата
     private AuthService authService;//Аутентификация пользователя
-    private final int CONNECTION_TIME = 20_000; //Время на подклюечение к серверу
+//    private final int CONNECTION_TIME = 20_000; //Время на подклюечение к серверу
+    private Thread timeoutThread;
 
     public ClientHandler(Socket socket, ChatServer server, AuthService authService) {
         try {
@@ -31,6 +33,15 @@ public class ClientHandler {
             this.authService = authService;
             this.in = new DataInputStream(socket.getInputStream());
             this.out = new DataOutputStream(socket.getOutputStream());
+            this.timeoutThread = new Thread(() -> {
+                try {
+                    Thread.sleep(TIMEOUT_AUTHENTICATE);
+                    sendMessage(FINISH);//Если в другом потоке не будет вызван метод interrupt, то мы попадем сюда
+                } catch (InterruptedException e) {
+                    System.out.println("Успешная авторизация");//В другом потоке была успешная авторизация
+                }
+            });
+            timeoutThread.start();
             new Thread(() -> {
                 try {
                     if (authenticate()) { //Аутентифицирую пользователя на стороне сервера
@@ -48,22 +59,25 @@ public class ClientHandler {
 
     //Аутентификация пользователя
     private boolean authenticate() { // условный формат данных для аутентификации: /auth login1 pass1
-        Thread thread = new Thread(() -> { //Поток, который отсчитывает время на подключение к серверу
-            long start = System.currentTimeMillis();
-            while (true) {
-                long result = System.currentTimeMillis() - start;
-                if (result == CONNECTION_TIME) {
-                    sendMessage(FINISH);
-                    break;
-                }
-            }
-        });
-        thread.setDaemon(true); //Делаем поток демоном, чтобы не ждать завершения его работы в случае удачной авторизации пользователя
-        thread.start(); //Запускаем поток
+//        Thread thread = new Thread(() -> { //Поток, который отсчитывает время на подключение к серверу
+//            long start = System.currentTimeMillis();
+//            while (true) {
+//                long result = System.currentTimeMillis() - start;
+//                if (result == CONNECTION_TIME) {
+//                    sendMessage(FINISH);
+//                    break;
+//                }
+//            }
+//        });
+//        thread.setDaemon(true); //Делаем поток демоном, чтобы не ждать завершения его работы в случае удачной авторизации пользователя
+//        thread.start(); //Запускаем поток
         while (true) {
             try {
                 String authMessage = in.readUTF(); //Получаю сообщение от участница чата(клиента)
                 Command command = Command.getCommand(authMessage);
+                if(command == Command.END){
+                    return false;
+                }
                 if (command == Command.AUTH) {
                     String[] params = command.parse(authMessage);
                     String login = params[0];//Логин из сообщение
@@ -74,6 +88,7 @@ public class ClientHandler {
                             sendMessage(Command.ERROR, "Пользователь уже авторизован");
                             continue;
                         }
+                        this.timeoutThread.interrupt(); // при вызове этого метода у спящего треда будет брошено InterruptedException
                         sendMessage(Command.AUTHOK, nick); //Если ник не занят. Отправляю участнику чата(клиенту) сообщение для входа в чат
                         this.nick = nick;
                         //Отправляем всем пользователям, что клиент подключился
@@ -84,9 +99,6 @@ public class ClientHandler {
                     } else {
                         sendMessage(Command.ERROR, "Неверные логин и пароль");
                     }
-                }
-                if (command == END) { //Если от клиента пришла таблетка, закрываем соединение
-                    return false;
                 }
             } catch (IOException e) {
                 e.printStackTrace();

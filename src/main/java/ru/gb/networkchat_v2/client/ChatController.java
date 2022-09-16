@@ -5,15 +5,13 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
-import javafx.scene.text.Text;
 import ru.gb.networkchat_v2.Command;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Optional;
 //Класс описывает поведение элементов пользовательского интерфейса
 public class ChatController {
+    public TextField newUserNameField;
     @FXML
     private ListView<String> clientList;
     @FXML
@@ -119,5 +117,13 @@ public class ChatController {
 
     public ChatClient getClient() {
         return client;
+    }
+
+    public void changeUserNameBtnClick(ActionEvent actionEvent) {
+        String newUserName = newUserNameField.getText();
+        if(newUserName == null || newUserName.isBlank()){
+            showError("Ник не может быть пустым или состоять из пробелов");
+        }
+        client.sendMessage(Command.CHANGE_USERNAME, newUserName);
     }
 }

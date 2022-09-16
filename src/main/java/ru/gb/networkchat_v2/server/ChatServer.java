@@ -22,7 +22,7 @@ public class ChatServer {
     //Запуск сервера
     public void start() {
         try (ServerSocket serverSocket = new ServerSocket(8189); //Создаем серверный сокет
-             AuthService authService = new InMemoryAuthService()) { //Создаем экземпляр класса определения пользователя
+             AuthService authService = new DataBaseAuthenticateService()) { //Создаем экземпляр класса определения пользователя (1.Память. 2.Сервер. Сейчас Сервер)
             while (true) {
                 System.out.println("Ожидаю поключения...");
                 Socket socket = serverSocket.accept();

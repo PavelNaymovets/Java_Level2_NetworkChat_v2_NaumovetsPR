@@ -67,6 +67,14 @@ public enum Command {
         public String[] parse(String commandText) {
             return new String[0];
         }
+    },
+
+    CHANGE_USERNAME("/change_userName") {
+        @Override
+        public String[] parse(String commandText) {
+            String[] message = commandText.split(TOKEN_DELIMITER, 2);
+            return new String[]{message[1]};
+        }
     };
 
     private final String command;//Хранит обозначение команды
