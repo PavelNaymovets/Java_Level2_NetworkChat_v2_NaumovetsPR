@@ -75,6 +75,12 @@ public enum Command {
             String[] message = commandText.split(TOKEN_DELIMITER, 2);
             return new String[]{message[1]};
         }
+    }, NICK_BUSY("/nick_busy"){
+        @Override
+        public String[] parse(String commandText) {
+            String[] message = commandText.split(TOKEN_DELIMITER,2);
+            return new String[]{message[1]};
+        }
     };
 
     private final String command;//Хранит обозначение команды

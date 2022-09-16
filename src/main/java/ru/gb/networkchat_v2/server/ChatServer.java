@@ -22,11 +22,12 @@ public class ChatServer {
     //Запуск сервера
     public void start() {
         try (ServerSocket serverSocket = new ServerSocket(8189); //Создаем серверный сокет
-             AuthService authService = new DataBaseAuthenticateService()) { //Создаем экземпляр класса определения пользователя (1.Память. 2.Сервер. Сейчас Сервер)
+             AuthService authService = new DataBaseAuthenticateService();
+             UsernameService usernameService = new DataBaseAuthenticateService()) { //Создаем экземпляр класса определения пользователя (1.Память. 2.Сервер. Сейчас Сервер)
             while (true) {
                 System.out.println("Ожидаю поключения...");
                 Socket socket = serverSocket.accept();
-                new ClientHandler(socket, this, authService); //Создаем экземпляр класса, описывающего взаимодействие сервера с каждым клиентом(уачстником чата)
+                new ClientHandler(socket, this, authService, usernameService); //Создаем экземпляр класса, описывающего взаимодействие сервера с каждым клиентом(уачстником чата)
                 System.out.println("Клиент подключился");
             }
         } catch (IOException e) {
@@ -50,7 +51,7 @@ public class ChatServer {
         broadcastClientsList();
     }
 
-    private void broadcastClientsList() {
+    public void broadcastClientsList() {
         String nicks = clients.values().stream()
                 .map(ClientHandler::getNick)
                 .collect(Collectors.joining(" "));

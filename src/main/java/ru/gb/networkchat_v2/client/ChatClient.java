@@ -56,7 +56,7 @@ public class ChatClient {
             if (command == FINISH) { //Таблетка на случай, если время подключения к серверу истечет
                 Platform.runLater(() -> controller.showError("Истекло время на вход в чат. Пожалуйста, перезапустите приложение "));
                 try {
-                    Thread.sleep(5000);
+                    Thread.sleep(5000); //Нужно, чтобы пользователь увидел сообщение об ошибке
                     sendMessage(END);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
@@ -112,6 +112,10 @@ public class ChatClient {
             }
             if (CLIENTS == command) {
                 Platform.runLater(() -> controller.updateClientList(params));
+            }
+            if (NICK_BUSY == command){
+                String messageError = params[0];
+                Platform.runLater(() -> controller.showError(messageError));
             }
         }
     }

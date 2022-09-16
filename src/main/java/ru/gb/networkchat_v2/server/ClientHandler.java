@@ -22,15 +22,18 @@ public class ClientHandler {
     private DataInputStream in;//Поток получения информации
     private DataOutputStream out;//Поток передачи информации
     private String nick;//Ник участника чата
+    private String login;//Логин участника чата
     private AuthService authService;//Аутентификация пользователя
-//    private final int CONNECTION_TIME = 20_000; //Время на подклюечение к серверу
+    private UsernameService usernameService;
+    //    private final int CONNECTION_TIME = 20_000; //Время на подклюечение к серверу
     private Thread timeoutThread;
 
-    public ClientHandler(Socket socket, ChatServer server, AuthService authService) {
+    public ClientHandler(Socket socket, ChatServer server, AuthService authService, UsernameService usernameService) {
         try {
             this.server = server;
             this.socket = socket;
             this.authService = authService;
+            this.usernameService = usernameService;
             this.in = new DataInputStream(socket.getInputStream());
             this.out = new DataOutputStream(socket.getOutputStream());
             this.timeoutThread = new Thread(() -> {
@@ -91,6 +94,7 @@ public class ClientHandler {
                         this.timeoutThread.interrupt(); // при вызове этого метода у спящего треда будет брошено InterruptedException
                         sendMessage(Command.AUTHOK, nick); //Если ник не занят. Отправляю участнику чата(клиенту) сообщение для входа в чат
                         this.nick = nick;
+                        this.login = login;
                         //Отправляем всем пользователям, что клиент подключился
                         server.broadcast(Command.MESSAGE, "Пользователь " + nick + " зашел в чат");
                         //Добавляем пользователя в список клиентов
@@ -160,6 +164,12 @@ public class ClientHandler {
                     String nickTo = params[0];
                     String message = params[1];
                     server.sendPrivateMessage(nickTo, message, this);
+                    continue;
+                }
+                if (command == CHANGE_USERNAME) {
+                    String newUserName = command.parse(receivedMessage)[0];
+                    rename(newUserName);
+                    continue;
                 } else {
                     server.broadcast(Command.MESSAGE, nick + ": " + command.parse(receivedMessage)[0]); //Сервер рассылает сообщение всем уже авторизированным участникам чата
                 }
@@ -167,6 +177,20 @@ public class ClientHandler {
                 e.printStackTrace();
             }
         }
+    }
+
+    private void rename(String newUserName) {
+        if(usernameService.changeUsername(login, newUserName)){
+            setNick(newUserName);
+            server.broadcastClientsList();//Обновляем список клиентов на панели чата(правая сторона)
+            server.broadcast(Command.MESSAGE, "Пользователь " + nick + " сменил ник на " + newUserName);//Отправляем всем пользователям, что пользователь сменил ник
+        } else{
+            sendMessage(NICK_BUSY, "Ник занят другим пользователем");
+        }
+    }
+
+    private void setNick(String newUserName) {
+        this.nick = newUserName;
     }
 
 //    private String getMessage(String receivedMessage) {

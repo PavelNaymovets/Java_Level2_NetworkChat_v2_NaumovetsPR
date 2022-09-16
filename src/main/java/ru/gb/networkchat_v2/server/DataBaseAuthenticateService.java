@@ -1,19 +1,19 @@
 package ru.gb.networkchat_v2.server;
 
-import java.io.IOException;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class DataBaseAuthenticateService extends DataBaseConnection implements AuthService{
+public class DataBaseAuthenticateService extends DataBaseConnection implements AuthService, UsernameService {
 
-    private static class UserDataFromDataBase{
+    private static class UserDataFromDataBase {
         private String nick;
         private String login;
         private String password;
 
-        public UserDataFromDataBase(String nick, String login, String password){
+        public UserDataFromDataBase(String nick, String login, String password) {
             this.nick = nick;
             this.login = login;
             this.password = password;
@@ -21,6 +21,9 @@ public class DataBaseAuthenticateService extends DataBaseConnection implements A
 
         public String getNick() {
             return nick;
+        }
+        public void setNick(String newUserName){
+            this.nick = newUserName;
         }
 
         public String getLogin(){
@@ -37,7 +40,7 @@ public class DataBaseAuthenticateService extends DataBaseConnection implements A
 //        }
     }
 
-    private List<UserDataFromDataBase> userDataFromDB;
+    private static List<UserDataFromDataBase> userDataFromDB;
 
     @Override
     public String getNickByLoginAndPassword(String login, String password) {
@@ -48,21 +51,47 @@ public class DataBaseAuthenticateService extends DataBaseConnection implements A
                 .orElse(null);
     }
 
-    public DataBaseAuthenticateService(){
+    public DataBaseAuthenticateService() {
         userDataFromDB = new ArrayList<>();
-        try (ResultSet resultSet = getStatement().executeQuery("SELECT * FROM authenticate;")){
-            while (resultSet.next()){
+        getDataUsersFromDB(userDataFromDB);
+    }
+
+    private void getDataUsersFromDB(List<UserDataFromDataBase> userDataFromDB) {
+        try (ResultSet resultSet = getStatement().executeQuery("SELECT * FROM authenticate;")) {
+            while (resultSet.next()) {
                 String nick = resultSet.getString("Username");
                 String login = resultSet.getString("Login");
                 String password = resultSet.getString("Password");
 
-                UserDataFromDataBase user = new UserDataFromDataBase(nick,login,password);
+                UserDataFromDataBase user = new UserDataFromDataBase(nick, login, password);
                 userDataFromDB.add(user);
             }
-            close();//закрываю соединение с базой
-        } catch (SQLException | IOException e) {
+        } catch (SQLException e) {
             e.printStackTrace();
         }
+    }
+    @Override
+    public boolean changeUsername(String login, String newUserName) {
+        try {
+            getDataUsersFromDB(userDataFromDB);//Считаю базу. Проверка внесенных кем-то измненений.
+            for (UserDataFromDataBase user : userDataFromDB) {
+                if (user.getNick().equalsIgnoreCase(newUserName)) {//Если ник занят верну false
+                    return false;
+                }
+            }
+            PreparedStatement prs = getConnection().prepareStatement("UPDATE authenticate SET username = ? WHERE login = ?;");
+            prs.setString(1, newUserName);
+            prs.setString(2, login);
+            prs.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        for (int i = 0; i < userDataFromDB.size(); i++) { //обновляю ник в считаной мною базе
+            if(userDataFromDB.get(i).getLogin().equalsIgnoreCase(login)){
+                userDataFromDB.get(i).setNick(newUserName);
+            }
+        }
+        return true;
     }
 
 }

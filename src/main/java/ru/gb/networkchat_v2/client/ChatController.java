@@ -123,6 +123,7 @@ public class ChatController {
         String newUserName = newUserNameField.getText();
         if(newUserName == null || newUserName.isBlank()){
             showError("Ник не может быть пустым или состоять из пробелов");
+            return;
         }
         client.sendMessage(Command.CHANGE_USERNAME, newUserName);
     }
