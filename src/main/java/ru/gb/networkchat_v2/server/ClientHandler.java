@@ -22,6 +22,7 @@ public class ClientHandler {
     private DataInputStream in;//Поток получения информации
     private DataOutputStream out;//Поток передачи информации
     private String nick;//Ник участника чата
+    private String oldNick;//Ник до изменения ника
     private String login;//Логин участника чата
     private AuthService authService;//Аутентификация пользователя
     private UsernameService usernameService;
@@ -167,8 +168,9 @@ public class ClientHandler {
                     continue;
                 }
                 if (command == CHANGE_USERNAME) {
-                    String newUserName = command.parse(receivedMessage)[0];
-                    rename(newUserName);
+                    String newNick = command.parse(receivedMessage)[0];
+                    rename(newNick);//Обновляю ник пользователя в списке клиентов сервера
+                    server.updateSubscribe(oldNick, nick);//Обновляю ник в списке авторизованных пользователей
                     continue;
                 } else {
                     server.broadcast(Command.MESSAGE, nick + ": " + command.parse(receivedMessage)[0]); //Сервер рассылает сообщение всем уже авторизированным участникам чата
@@ -179,18 +181,19 @@ public class ClientHandler {
         }
     }
 
-    private void rename(String newUserName) {
-        if(usernameService.changeUsername(login, newUserName)){
-            setNick(newUserName);
-            server.broadcastClientsList();//Обновляем список клиентов на панели чата(правая сторона)
-            server.broadcast(Command.MESSAGE, "Пользователь " + nick + " сменил ник на " + newUserName);//Отправляем всем пользователям, что пользователь сменил ник
+    private void rename(String newNick) {
+        if(usernameService.changeUsername(login, newNick)){
+            oldNick = this.nick; //Запомнил старый ник
+            setNick(newNick); //Изменил старый ник на новый
+            server.broadcastClientsList();//Обновляю список клиентов на панели чата(правая сторона)
+            server.broadcast(Command.MESSAGE, "Пользователь " + oldNick + " сменил ник на " + newNick);//Отправляем всем пользователям, что пользователь сменил ник
         } else{
             sendMessage(NICK_BUSY, "Ник занят другим пользователем");
         }
     }
 
-    private void setNick(String newUserName) {
-        this.nick = newUserName;
+    private void setNick(String newNick) {
+        this.nick = newNick;
     }
 
 //    private String getMessage(String receivedMessage) {

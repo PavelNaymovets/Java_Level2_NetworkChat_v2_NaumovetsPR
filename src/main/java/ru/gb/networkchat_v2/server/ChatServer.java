@@ -14,7 +14,7 @@ import static ru.gb.networkchat_v2.Command.CLIENTS;
 //Класс описывает логику работы сервера. Этот класс знает всю информацию об участниках чата(клиентах)
 public class ChatServer {
     //Список клиентов
-    private Map<String,ClientHandler> clients; //Список участников чата (клиентов сервера).
+    private Map<String,ClientHandler> clients; //Список авторизованных пользователей
 
     public ChatServer() {
         this.clients = new HashMap<>();
@@ -49,6 +49,10 @@ public class ChatServer {
     public void subscribe(ClientHandler client) {
         clients.put(client.getNick(), client);
         broadcastClientsList();
+    }
+
+    public void updateSubscribe(String oldNick ,String newNick){ //Обновляю ник авторизованного пользователя
+        clients.put(newNick, clients.remove(oldNick));
     }
 
     public void broadcastClientsList() {
