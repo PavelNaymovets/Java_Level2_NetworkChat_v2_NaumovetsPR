@@ -17,9 +17,9 @@ public enum Command {
     },
     AUTHOK("/authok"){ //аутентификация пройдена
         @Override
-        public String[] parse(String commandText) { //authok nick1
-            String[] message = commandText.split(TOKEN_DELIMITER);
-            return new String[]{message[1]};//Возвращается ник
+        public String[] parse(String commandText) { //authok nick login
+            String[] message = commandText.split(TOKEN_DELIMITER,3);
+            return new String[]{message[1], message[2]}; //Возвращается ник и логин
         }
     },
     END("/end"){ //сообщение о завершении работы

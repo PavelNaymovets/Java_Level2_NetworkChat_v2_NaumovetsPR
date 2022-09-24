@@ -3,10 +3,14 @@ package ru.gb.networkchat_v2.client;
 import javafx.application.Platform;
 import ru.gb.networkchat_v2.Command;
 
-import java.io.*;
-import java.lang.reflect.Array;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.net.Socket;
-import java.util.Arrays;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.util.List;
 
 import static ru.gb.networkchat_v2.Command.*;
 
@@ -16,6 +20,9 @@ public class ChatClient {
     private DataInputStream in; //Поток получения информации
     private DataOutputStream out; //Поток передачи информации
     private ChatController controller; //Экземпляр класса, который описывает поведение элементов пользовательского интерфейса. Нужен для взаимодействия с интерфейсом пользователя
+    private String nick;
+    private String login;
+    private Path msgHistoryFile; //Путь к файлу с историей сообщений
 
     public ChatClient(ChatController controller) {
         this.controller = controller;
@@ -58,7 +65,10 @@ public class ChatClient {
             Command command = getCommand(message);
             String[] params = command.parse(message);
             if (command == AUTHOK) {//Если пользователь аутентифицирован, то вернется сообщение в формате authok nick1
-                String nick = params[0];
+                nick = params[0];
+                login = params[1];
+                createHistoryMessageFile(); // Создаю файл для хранения истории сообщений, если его ещё нет.
+                readMessageHistoryFromFile();
                 controller.setVisibleTimeOut(false);
                 controller.setAuth(true);//Делаю блок чата видимым
                 controller.addMessage("Успешная авторизация под ником " + nick);//Передаю сообщение в окно истории чата только для себя
@@ -124,6 +134,7 @@ public class ChatClient {
             }
             if (MESSAGE == command) {
                 Platform.runLater(() -> controller.addMessage(params[0])); //Добавляю сообщение от сервера в окно истории чата
+                writeMessageHistoryInFile(params[0] + "\n");
             }
             if (CLIENTS == command) {
                 Platform.runLater(() -> controller.updateClientList(params));
@@ -147,4 +158,47 @@ public class ChatClient {
     public void sendMessage(Command command, String... params) {
         sendMessage(command.collectMessage(params));
     }
+
+    //Создает файл с историей записей чата
+    private void createHistoryMessageFile() {
+        msgHistoryFile = Path.of("src", "main", "resources", "ru", "gb", "networkchat_v2", "client", "history_" + login + ".txt");
+        if (!Files.exists(msgHistoryFile)) {
+            try {
+                Files.createFile(msgHistoryFile);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    //Записывает историю сообщений в файл
+    private void writeMessageHistoryInFile(String msg) {
+        try {
+            Files.writeString(msgHistoryFile, msg, StandardOpenOption.APPEND);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    //Вычитываю историю сообщений из файла истории сообщений
+    private void readMessageHistoryFromFile() {
+        if (Files.exists(msgHistoryFile)) {
+            try {
+                List<String> msgStrings = Files.readAllLines(msgHistoryFile);
+                if (msgStrings.size() > 0) {
+                    int maxStrings = Math.min(msgStrings.size(), 100);
+                    controller.addMessage("*** предыдущие сообщения ***");
+                    for (int i = msgStrings.size() - maxStrings; i < msgStrings.size(); i++) {
+                        String msg = msgStrings.get(i);
+                        controller.addMessage(msg);
+                    }
+                    controller.addMessage("*** новые сообщения ***");
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+
 }

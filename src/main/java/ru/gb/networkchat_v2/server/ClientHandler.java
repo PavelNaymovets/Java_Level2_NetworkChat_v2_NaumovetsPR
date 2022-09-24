@@ -93,7 +93,7 @@ public class ClientHandler {
                             continue;
                         }
                         this.timeoutThread.interrupt(); // при вызове этого метода у спящего треда будет брошено InterruptedException
-                        sendMessage(Command.AUTHOK, nick); //Если ник не занят. Отправляю участнику чата(клиенту) сообщение для входа в чат
+                        sendMessage(Command.AUTHOK, nick, login); //Если ник не занят. Отправляю участнику чата(клиенту) сообщение для входа в чат
                         this.nick = nick;
                         this.login = login;
                         //Отправляем всем пользователям, что клиент подключился

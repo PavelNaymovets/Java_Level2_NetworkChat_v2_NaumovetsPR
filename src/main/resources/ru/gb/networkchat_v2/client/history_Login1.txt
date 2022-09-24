@@ -1,0 +1,8 @@
+Nick1: sdfsdf
+Nick1: sdfsdf
+Nick1: sdfsdf
+Nick1: sdfsdf
+Пользователь Nick2 зашел в чат
+Nick2: sdfsdf
+От Nick2: sdfsdf
+Pavel: sdfsdf
