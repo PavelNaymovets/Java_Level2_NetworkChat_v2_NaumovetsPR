@@ -36,15 +36,30 @@ public class ChatClient {
                 closeConnection();//Закрываю соединение если "/end"
             }
         }).start();
+
     }
 
     private boolean waitAuth() throws IOException {
+        Thread thread = new Thread(() -> {//Отсчет времени авторизации пользователя
+            for (int i = 120; i >= 0 ; i--) {
+                try {
+                    Thread.sleep(1000);
+                    controller.getTimeOutAuth().setText("Время для входа в чат: " + String.valueOf(i));
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        });
+        thread.setDaemon(true);
+        thread.start();
+
         while (true) {
             String message = in.readUTF();//Читаю ответ от сервера
             Command command = getCommand(message);
             String[] params = command.parse(message);
             if (command == AUTHOK) {//Если пользователь аутентифицирован, то вернется сообщение в формате authok nick1
                 String nick = params[0];
+                controller.setVisibleTimeOut(false);
                 controller.setAuth(true);//Делаю блок чата видимым
                 controller.addMessage("Успешная авторизация под ником " + nick);//Передаю сообщение в окно истории чата только для себя
                 return true;

@@ -4,14 +4,17 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.text.Text;
 import ru.gb.networkchat_v2.Command;
 
 import java.io.IOException;
 import java.util.Optional;
 //Класс описывает поведение элементов пользовательского интерфейса
 public class ChatController {
-    public TextField newUserNameField;
+    public TextField newUserNameField; // Поле смены ника
+    public Text timeOutAuth; //Отсчет времени
     @FXML
     private ListView<String> clientList;
     @FXML
@@ -126,5 +129,12 @@ public class ChatController {
             return;
         }
         client.sendMessage(Command.CHANGE_USERNAME, newUserName);
+    }
+
+    public Text getTimeOutAuth() {
+        return timeOutAuth;
+    }
+    public void setVisibleTimeOut(boolean on){
+        timeOutAuth.setVisible(false);
     }
 }

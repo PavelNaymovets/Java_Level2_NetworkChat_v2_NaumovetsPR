@@ -3,6 +3,7 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
 <VBox alignment="CENTER" spacing="10.0" xmlns:fx="http://javafx.com/fxml"
       fx:controller="ru.gb.networkchat_v2.client.ChatController">
     <padding>
@@ -31,5 +32,6 @@
                 <ListView fx:id="clientList" minWidth="200" maxWidth="200" onMouseClicked="#SelectClient"/>
             </VBox>
         </HBox>
+        <Text fx:id="timeOutAuth"/>
     </VBox>
 </VBox>
