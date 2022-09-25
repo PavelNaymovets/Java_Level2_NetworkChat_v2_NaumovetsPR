@@ -18,3 +18,10 @@ Nick1: sdfsdf
 Nick2: sdfsdf
 От Nick2: sdfdsf
 Pavel: sdfsdf
+Pavel: sdfsdfsdfsd
+Pavel: fsdfsdf
+Pavel: dsfdsf
+От Pavel: sdfsdf
+Участнику Pavel: sdfsdf
+Пользователь Pavel сменил ник на Ivan
+Ivan: fsdfsd

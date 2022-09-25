@@ -6,6 +6,7 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 import ru.gb.networkchat_v2.Command;
 
+
 import java.io.IOException;
 //Класс описывает пользовательское окно(stage) и сцену(scene), которая содержит элементы пользовательского интерфейса, которые описаны в client-view.fxml файле
 public class ChatClientApp extends Application {

@@ -1,0 +1,5 @@
+2022-09-25 20:27:15,199 WARN [Thread-3] r.g.n.c.ChatClient [ChatClient.java:86] - Пользователь не вошел в чат. Время для входа закончилось.
+2022-09-25 20:47:57,028 WARN [Thread-3] r.g.n.c.ChatClient [ChatClient.java:151] - Обновилась панель с пользователями.
+2022-09-25 20:48:26,687 WARN [Thread-3] r.g.n.c.ChatClient [ChatClient.java:151] - Обновилась панель с пользователями.
+2022-09-25 20:48:35,827 WARN [Thread-3] r.g.n.c.ChatClient [ChatClient.java:134] - Пользователь: Pavel покинул чат.
+2022-09-25 20:48:35,828 WARN [Thread-3] r.g.n.c.ChatClient [ChatClient.java:103] - Соединение с сервером закрыто.

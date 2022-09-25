@@ -1,6 +1,8 @@
 package ru.gb.networkchat_v2.client;
 
 import javafx.application.Platform;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ru.gb.networkchat_v2.Command;
 
 import java.io.DataInputStream;
@@ -23,6 +25,7 @@ public class ChatClient {
     private String nick;
     private String login;
     private Path msgHistoryFile; //Путь к файлу с историей сообщений
+    private Logger log; //Логирование работы программы
 
     public ChatClient(ChatController controller) {
         this.controller = controller;
@@ -32,6 +35,7 @@ public class ChatClient {
         socket = new Socket("localhost", 8189); //Создаем точку подключения к серверу. В данном случае мой компьютер
         in = new DataInputStream(socket.getInputStream()); //Открываем поток получения информации
         out = new DataOutputStream(socket.getOutputStream()); //Открываем поток передачи инфомарции
+        log = LoggerFactory.getLogger(ChatClient.class); //Адрес класса в котором будет осуществляться логирование
         new Thread(() -> {
             try {
                 if (waitAuth()) {//Ожидаю аутентификации пользователя
@@ -71,14 +75,17 @@ public class ChatClient {
                 readMessageHistoryFromFile();
                 controller.setVisibleTimeOut(false);
                 controller.setAuth(true);//Делаю блок чата видимым
+                log.info("Успешная авторизация под ником " + nick);
                 controller.addMessage("Успешная авторизация под ником " + nick);//Передаю сообщение в окно истории чата только для себя
                 return true;
             }
             if (command == ERROR) {
+                log.error(params[0]);
                 Platform.runLater(() -> controller.showError(params[0]));
                 continue;
             }
             if (command == FINISH) { //Таблетка на случай, если время подключения к серверу истечет
+                log.warn("Пользователь не вошел в чат. Время для входа закончилось.");
                 Platform.runLater(() -> controller.showError("Истекло время на вход в чат. Пожалуйста, перезапустите приложение "));
                 try {
                     Thread.sleep(5000); //Нужно, чтобы пользователь увидел сообщение об ошибке
@@ -93,6 +100,7 @@ public class ChatClient {
 
     //Закрываю ресурсы соединения с сервером
     private void closeConnection() {
+        log.warn("Соединение с сервером закрыто.");
         if (in != null) {
             try {
                 in.close();
@@ -123,24 +131,29 @@ public class ChatClient {
             String receivedMessage = in.readUTF();
             Command command = getCommand(receivedMessage);
             if (END == command) { //Если пользователь захотел отключиться от чата, направляет "/end"
+                log.warn("Пользователь: " + nick + " покинул чат.");
                 controller.setAuth(false); //Скрываем блок чата. Показываем блок авторизации
                 break;
             }
             String[] params = command.parse(receivedMessage);
             if (ERROR == command) {
                 String messageError = params[0];
+                log.error(messageError);
                 Platform.runLater(() -> controller.showError(messageError));
                 continue;
             }
             if (MESSAGE == command) {
+                log.info(params[0]);
                 Platform.runLater(() -> controller.addMessage(params[0])); //Добавляю сообщение от сервера в окно истории чата
                 writeMessageHistoryInFile(params[0] + "\n");
             }
             if (CLIENTS == command) {
+                log.warn("Обновилась панель с пользователями.");
                 Platform.runLater(() -> controller.updateClientList(params));
             }
             if (NICK_BUSY == command){
                 String messageError = params[0];
+                log.info(messageError);
                 Platform.runLater(() -> controller.showError(messageError));
             }
         }
@@ -166,7 +179,7 @@ public class ChatClient {
             try {
                 Files.createFile(msgHistoryFile);
             } catch (IOException e) {
-                e.printStackTrace();
+                log.error("Путь для создания файла с историей сообщений не существует " + e.getMessage());
             }
         }
     }
@@ -176,7 +189,7 @@ public class ChatClient {
         try {
             Files.writeString(msgHistoryFile, msg, StandardOpenOption.APPEND);
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("Файла для записи истории сообщений не существует " + e.getMessage());
         }
     }
 
@@ -195,7 +208,7 @@ public class ChatClient {
                     controller.addMessage("*** новые сообщения ***");
                 }
             } catch (IOException e) {
-                e.printStackTrace();
+                log.error("Файла для извлечения 100 строк с историей сообщений не существует " + e.getMessage());
             }
         }
     }
