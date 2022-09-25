@@ -1,27 +1,16 @@
-Pavel: sdfdsf
-Pavel: dfsdf
-Pavel: sdfds
+Ivan: dfsdf
+Ivan: sdf
+От Ivan: sdf
+Участнику Ivan: sdf
+Пользователь Ivan сменил ник на Pavel
 Pavel: sdfsd
-Pavel: sdfsdfsdfsdfsdf
 Pavel: sdfsd
-От Pavel: sdfsdf
-Участнику Pavel: sdfsdf
-Pavel: sdf
-Pavel: sdf
-Pavel: sdf
-Пользователь Nick1 зашел в чат
-Nick1: sdfsdf
-Nick1: sdfsdf
-Nick1: sdfsdf
-Nick1: sdfsdf
-Пользователь Nick2 зашел в чат
-Nick2: sdfsdf
-От Nick2: sdfdsf
+От Pavel: sdf
+Участнику Pavel: sdf
+Pavel: sdfsd
+Pavel: sdfsd
+Pavel: sdfsd
 Pavel: sdfsdf
-Pavel: sdfsdfsdfsd
-Pavel: fsdfsdf
-Pavel: dsfdsf
-От Pavel: sdfsdf
-Участнику Pavel: sdfsdf
-Пользователь Pavel сменил ник на Ivan
-Ivan: fsdfsd
+Pavel: sdf
+Pavel: sdfsd
+Pavel: sdfsdfsfsdfsdf
